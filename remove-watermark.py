@@ -1,14 +1,17 @@
 #!/bin/env python3
 from PIL import Image
+import os
 
 SIZE_X = 256
 SIZE_Y = 256
 SIZE = SIZE_X,SIZE_Y
 WATERMARK = Image.open("watermark.png")
 WHITES = [(255, 255, 255), (255, 255, 255, 255)]
+ROOT = "../NeuralBlenderPack/assets/minecraft/textures/"
+DONE = []
 
 
-def clean(path, radius=2):
+def clean(path, radius=2, overwrite=False):
     src = Image.open(path)
     dest = Image.new("RGBA", (SIZE))
 
@@ -16,7 +19,10 @@ def clean(path, radius=2):
         for x in range(SIZE_X):
             p = clean_pixel(src, (x, y), radius)
             dest.putpixel((x, y), p)
-    dest.save(path.split(".")[0] + f"-{radius}.png")
+    if overwrite:
+        dest.save(path)
+    else:
+        dest.save(path[:-4] + f"-{radius}.png")
 
 
 def clean_pixel(img, xy, radius):
@@ -38,7 +44,6 @@ def clean_pixel(img, xy, radius):
             samples.append(img.getpixel(pos))
 
     return average_cols(samples)
-    #return (255,0,0,255)
 
 
 def average_cols(samples):
@@ -54,4 +59,24 @@ def is_watermark(xy):
     return WATERMARK.getpixel(xy) in WHITES
 
 
-clean("crimson_door.png", 2)
+def clean_dir(path):
+    items = os.listdir(path)
+    items.sort()
+    for name in items:
+        if os.path.isdir(path + name):
+            clean_dir(path + name + "/")
+        elif name not in DONE:
+            if name[-4:] == ".png":
+                clean(path + name, 2, True)
+                DONE.append(name)
+                print(name)
+                with open("done.txt", "a") as f:
+                    f.write(name+"\n")
+        else:
+            print(name + " failed")
+
+
+with open("done.txt", "r") as f:
+    DONE = f.read().split("\n")
+print(DONE[:10])
+clean_dir(ROOT)
